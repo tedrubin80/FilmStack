@@ -16,7 +16,6 @@ filmstack/
 │   ├── shared-config/     # Shared config
 │   ├── shared-db/         # Prisma / DB access
 │   └── shared-types/      # Shared TypeScript types
-├── marketing/             # Standalone marketing site (not in npm workspaces)
 ├── docker-compose.yml     # Full stack: Postgres, Redis, APIs, webs
 ├── railway.toml           # Self-hosted / Railway hints
 └── vercel.json            # Optional festival-web preview
@@ -33,7 +32,7 @@ filmstack/
 | PostgreSQL 16 | 5432 | Shared database |
 | Redis 7 | 6379 | Cache, sessions, rate limits, queues |
 
-`marketing/` is separate: deploy on Vercel (or anywhere static). CTAs use `VITE_APP_URL` pointing at a festival-web instance.
+Marketing is a separate repo: [feststackmarketing](https://github.com/tedrubin80/feststackmarketing). CTAs use `VITE_APP_URL` pointing at a festival-web instance.
 
 ## Auth and tenancy
 
@@ -76,13 +75,13 @@ Uploads, videos, films, playlists, comments, ratings, search, subscriptions, wai
 ## Frontends
 
 - **festival-web `/`**: instance homepage for self-hosted installs (sign in / create account). Not a SaaS marketing funnel.
-- **marketing/**: public product / pricing story; links out to `VITE_APP_URL`.
+- **[feststackmarketing](https://github.com/tedrubin80/feststackmarketing)**: public product / pricing story; links out to `VITE_APP_URL`.
 
 ## Deploy
 
 - **Docker Compose**: primary self-host path (`INSTALL.md`).
 - **Railway**: see root `railway.toml`; one service per Dockerfile or Compose.
-- **Vercel**: root `vercel.json` can preview festival-web; `marketing/vercel.json` is the marketing site deploy.
+- **Vercel**: root `vercel.json` can preview festival-web; marketing deploys from the feststackmarketing repo.
 
 ## License implications
 

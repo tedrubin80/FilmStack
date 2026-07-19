@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Open-source release under AGPL-3.0
 - Instance homepage for self-hosted festival-web
-- Standalone `marketing/` site
+- Marketing site in [feststackmarketing](https://github.com/tedrubin80/feststackmarketing)
 - Install, requirements, and technical documentation
 - Railway and Vercel config stubs
 

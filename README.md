@@ -75,11 +75,11 @@ Most festival software is closed SaaS. FestScout is built to be **self-hosted op
 - Optional Bunny.net CDN
 - Bridge routes to connect streaming ↔ festival where needed
 
-### Marketing (`marketing/`)
+### Marketing (separate repo)
 
-- Standalone Vite site for public product / pricing storytelling
+- Public product / pricing site lives in **[feststackmarketing](https://github.com/tedrubin80/feststackmarketing)**
 - CTAs point at your live instance via `VITE_APP_URL`
-- Deploy separately (Vercel-friendly)
+- Deploy independently (Vercel / Railway)
 
 ---
 
@@ -87,8 +87,8 @@ Most festival software is closed SaaS. FestScout is built to be **self-hosted op
 
 ```text
                     ┌─────────────────────────┐
-                    │  marketing/ (optional)  │
-                    │  Vercel / static host   │
+                    │  feststackmarketing     │
+                    │  (separate GitHub repo) │
                     │  CTAs → VITE_APP_URL    │
                     └───────────┬─────────────┘
                                 │
@@ -135,7 +135,6 @@ filmstack/
 │   ├── shared-config/
 │   ├── shared-db/             # Prisma schema / migrations
 │   └── shared-types/
-├── marketing/                 # Standalone marketing site (not in npm workspaces)
 ├── nginx/                     # Generic reverse-proxy examples
 ├── docker-compose.yml         # Full stack
 ├── railway.toml               # Self-host / Railway hints
@@ -313,12 +312,13 @@ Authenticated users hitting `/` are redirected to `/dashboard`.
 | Surface | Location | Purpose |
 |---------|----------|---------|
 | **Instance homepage** | `apps/festival-web` route `/` | What operators see on a self-hosted install: brand, status, Sign in / Create account, capability summary |
-| **Marketing site** | `marketing/` | Public product story (platform, live rooms, pricing-style sections). Not required to run a festival |
+| **Marketing site** | [tedrubin80/feststackmarketing](https://github.com/tedrubin80/feststackmarketing) | Public product story (platform, live rooms, pricing-style sections). Not required to run a festival |
 
-### Run marketing locally
+Clone and run marketing separately:
 
 ```bash
-cd marketing
+git clone https://github.com/tedrubin80/feststackmarketing.git
+cd feststackmarketing
 cp .env.example .env
 # VITE_APP_URL=http://localhost:3000
 npm install
@@ -326,8 +326,6 @@ npm run dev
 ```
 
 Default marketing port: **5173**.
-
-`marketing/` is intentionally **outside** npm workspaces so it can deploy independently.
 
 ---
 
@@ -389,7 +387,7 @@ See root [`railway.toml`](railway.toml). Typical pattern:
 | Config | Use |
 |--------|-----|
 | Root [`vercel.json`](vercel.json) | Optional preview of `festival-web` |
-| [`marketing/vercel.json`](marketing/vercel.json) | Marketing site (primary Vercel project) |
+| [feststackmarketing](https://github.com/tedrubin80/feststackmarketing) | Marketing site (own `vercel.json` / Railway config) |
 
 Set `VITE_APP_URL` / `VITE_API_URL` build envs as needed. Marketing CTAs must point at a real festival-web origin.
 
@@ -480,7 +478,7 @@ Actively structured for open-source self-hosting:
 
 - [x] AGPL-3.0 license
 - [x] Instance homepage (non-SaaS)
-- [x] Separate `marketing/` site
+- [x] Separate marketing repo ([feststackmarketing](https://github.com/tedrubin80/feststackmarketing))
 - [x] Local disk storage (no AWS required)
 - [x] Docker Compose full stack
 - [x] Install / technical / security docs

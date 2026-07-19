@@ -93,10 +93,13 @@ Useful scripts (from repo root):
 
 ## 4. Marketing site (optional)
 
-Not required to run a festival instance:
+Not required to run a festival instance. Lives in a **separate repo**:
+
+[https://github.com/tedrubin80/feststackmarketing](https://github.com/tedrubin80/feststackmarketing)
 
 ```bash
-cd marketing
+git clone https://github.com/tedrubin80/feststackmarketing.git
+cd feststackmarketing
 cp .env.example .env
 # Set VITE_APP_URL to your festival-web URL
 npm install
@@ -109,7 +112,7 @@ Default marketing dev port: **5173**.
 
 - **Self-hosted / Railway:** see root [`railway.toml`](railway.toml) and [`docker-compose.yml`](docker-compose.yml)
 - **Festival web preview on Vercel:** see root [`vercel.json`](vercel.json)
-- **Marketing on Vercel:** deploy the `marketing/` directory; see [`marketing/vercel.json`](marketing/vercel.json)
+- **Marketing:** deploy from [feststackmarketing](https://github.com/tedrubin80/feststackmarketing)
 
 Do not commit `.env` or real secrets.
 

@@ -16,7 +16,7 @@ Both sides use the platform daily. The tone must work for industry insiders on b
 
 FestScout is open-source film festival management software (AGPL-3.0) you self-host: submissions, judging, payments, awards, and a built-in live video system (screening rooms, filmmaker Q&As, panel discussions). The video system is the primary differentiator over FilmFreeway and similar tools: festivals can run entirely inside FestScout, from first submission to live closing night ceremony.
 
-Success looks like: a festival director who never has to leave FestScout, and a filmmaker who feels their work is seen by people who care about cinema. The `marketing/` site is for public product storytelling; each deployed instance has its own local homepage for sign-in and account creation.
+Success looks like: a festival director who never has to leave FestScout, and a filmmaker who feels their work is seen by people who care about cinema. The [feststackmarketing](https://github.com/tedrubin80/feststackmarketing) site is for public product storytelling; each deployed instance has its own local homepage for sign-in and account creation.
 
 ## Brand Personality
 

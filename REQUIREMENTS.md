@@ -51,7 +51,7 @@ Modern evergreen browsers: latest Chrome, Firefox, Safari, Edge. JavaScript must
 | 3001 | festival-api |
 | 3002 | streaming-api |
 | 3003 | streaming-web |
-| 5173 | marketing (dev only) |
+| 5173 | feststackmarketing (dev only, separate repo) |
 | 5432 | PostgreSQL |
 | 6379 | Redis |
 
