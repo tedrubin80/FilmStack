@@ -1,0 +1,30 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+body {
+  font-family: 'Barlow', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: oklch(0.09 0 0);
+  color: oklch(0.95 0.006 80);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid oklch(0.72 0.165 68);
+  outline-offset: 2px;
+}

@@ -1,0 +1,26 @@
+# FilmStack / FestScout — Railway (self-hosted stack)
+#
+# Deploy the Docker Compose services (Postgres, Redis, APIs, web apps)
+# as a Railway project. Prefer linking this repo and using Docker Compose
+# via Railway's compose support, or deploy each service from its Dockerfile.
+#
+# Required secrets (set in Railway Variables):
+#   DB_PASSWORD, REDIS_PASSWORD, JWT_SECRET, JWT_REFRESH_SECRET, CSRF_SECRET
+# Optional: STRIPE_*, RESEND_API_KEY, BUNNY_*, CDN_HOSTNAME, SENTRY_DSN, UPLOAD_PATH
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "apps/festival-api/Dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
+
+# Notes:
+# - festival-api Dockerfile is the default entry above for a single-service
+#   Railway service. For the full stack, use docker-compose.yml or create
+#   one Railway service per Dockerfile under apps/.
+# - festival-web / streaming-web need VITE_API_URL build args.
+# - Bind Postgres and Redis as Railway plugins and inject DATABASE_URL / REDIS_URL.

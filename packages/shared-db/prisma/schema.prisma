@@ -1,0 +1,895 @@
+// ─── FilmStack Unified Database Schema ───────────────────────────────
+// Strategy: Keep festival-side models compatible with existing FilmFestKit
+// routes (Int IDs, original model names) while adding new streaming models.
+// This hybrid approach lets us port routes without rewriting every query.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// FESTIVAL SIDE — Matches existing FilmFestKit schema (Int IDs)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model Tenant {
+  id              Int      @id @default(autoincrement())
+  uuid            String   @unique @default(uuid())
+  subdomain       String   @unique
+  name            String
+  email           String
+  databaseName    String?  @map("database_name")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  isActive        Boolean  @default(true) @map("is_active")
+  planType        String   @default("basic") @map("plan_type")
+  storageUsed     BigInt   @default(0) @map("storage_used")
+  storageLimit    BigInt   @default(5368709120) @map("storage_limit")
+  apiEnabled      Boolean  @default(false) @map("api_enabled")
+  apiRateLimit    Int      @default(100) @map("api_rate_limit")
+  customDomain    String?  @map("custom_domain")
+  settings        String   @default("{}")
+  securitySettings String  @default("{\"two_factor_enabled\": false, \"ip_whitelist\": []}") @map("security_settings")
+
+  adminUsers       AdminUser[]
+  tenantAdmins     TenantAdmin[]
+  festivals        Festival[]
+  films            Film[]
+  filmCategories   FilmCategory[]
+  videoRooms       VideoRoom[]
+  apiKeys          ApiKey[]
+  securityLogs     SecurityLog[]
+  accessLogs       TenantAccessLog[]
+  adminActivityLogs AdminActivityLog[]
+  tenantAdminLogs  TenantAdminLog[]
+  judges           Judge[]
+  payments         Payment[]
+  emailTemplates   EmailTemplate[]
+  emailLogs        EmailLog[]
+  dataExportRequests DataExportRequest[]
+  gdprConsents     GDPRConsent[]
+  dataRetentionPolicies DataRetentionPolicy[]
+  dataBreachLogs   DataBreachLog[]
+
+  @@map("tenants")
+}
+
+model AdminUser {
+  id          Int       @id @default(autoincrement())
+  tenantId    Int       @map("tenant_id")
+  username    String
+  email       String
+  passwordHash String   @map("password_hash")
+  firstName   String?   @map("first_name")
+  lastName    String?   @map("last_name")
+  role        String    @default("admin")
+  isActive    Boolean   @default(true) @map("is_active")
+  lastLogin   DateTime? @map("last_login")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  videoRoomsCreated VideoRoom[]         @relation("VideoRoomCreator")
+  roomParticipants  RoomParticipant[]
+  roomChatMessages  RoomChatMessage[]
+  adminActivityLogs AdminActivityLog[]
+  dataExportRequests DataExportRequest[]
+  gdprConsents      GDPRConsent[]
+  dataBreachLogsCreated DataBreachLog[]
+
+  @@unique([tenantId, username])
+  @@unique([tenantId, email])
+  @@index([tenantId, isActive])
+  @@index([email])
+  @@index([lastLogin])
+  @@map("admin_users")
+}
+
+model TenantAdmin {
+  id          Int       @id @default(autoincrement())
+  tenantId    Int       @map("tenant_id")
+  username    String
+  passwordHash String   @map("password_hash")
+  email       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  lastLogin   DateTime? @map("last_login")
+  isActive    Boolean   @default(true) @map("is_active")
+
+  tenant          Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantAdminLogs TenantAdminLog[]
+
+  @@unique([tenantId, username])
+  @@map("tenant_admins")
+}
+
+model Festival {
+  id                  Int       @id @default(autoincrement())
+  tenantId            Int       @map("tenant_id")
+  name                String
+  description         String?
+  startDate           DateTime? @map("start_date")
+  endDate             DateTime? @map("end_date")
+  location            String?
+  logoUrl             String?   @map("logo_url")
+  website             String?
+  contactEmail        String?   @map("contact_email")
+  contactPhone        String?   @map("contact_phone")
+  submissionDeadline  DateTime? @map("submission_deadline")
+  earlyBirdDeadline   DateTime? @map("early_bird_deadline")
+  notificationDate    DateTime? @map("notification_date")
+  entryFee            Float?    @map("entry_fee")
+  earlyBirdFee        Float?    @map("early_bird_fee")
+  currency            String    @default("USD")
+  isActive            Boolean   @default(true) @map("is_active")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  settings            String    @default("{}")
+
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  films          Film[]
+  filmCategories FilmCategory[]
+  awards         Award[]
+  judges         Judge[]
+  payments       Payment[]
+
+  @@index([tenantId, isActive])
+  @@index([startDate, endDate])
+  @@index([submissionDeadline])
+  @@index([createdAt])
+  @@map("festivals")
+}
+
+model Film {
+  id               Int       @id @default(autoincrement())
+  tenantId         Int       @map("tenant_id")
+  festivalId       Int       @map("festival_id")
+  title            String
+  director         String?
+  producer         String?
+  writer           String?
+  duration         Int?
+  year             Int?
+  country          String?
+  language         String?
+  subtitles        String?
+  genre            String?
+  synopsis         String?
+  submissionDate   DateTime  @default(now()) @map("submission_date")
+  status           String    @default("pending")
+  screeningFormat  String?   @map("screening_format")
+  aspectRatio      String?   @map("aspect_ratio")
+  soundFormat      String?   @map("sound_format")
+  premiereStatus   String?   @map("premiere_status")
+  studentFilm      Boolean   @default(false) @map("student_film")
+  contactName      String?   @map("contact_name")
+  contactEmail     String?   @map("contact_email")
+  contactPhone     String?   @map("contact_phone")
+  entryFeePaid     Boolean   @default(false) @map("entry_fee_paid")
+  paymentDate      DateTime? @map("payment_date")
+  paymentMethod    String?   @map("payment_method")
+  paymentReference String?   @map("payment_reference")
+  notes            String?
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  festival  Festival   @relation(fields: [festivalId], references: [id], onDelete: Cascade)
+  filmFiles FilmFile[]
+  awards    Award[]
+  judgeScores JudgeScore[]
+  payments  Payment[]
+
+  @@index([tenantId, festivalId])
+  @@index([festivalId, status])
+  @@index([status, submissionDate])
+  @@index([submissionDate])
+  @@index([contactEmail])
+  @@map("films")
+}
+
+model FilmFile {
+  id        Int      @id @default(autoincrement())
+  filmId    Int      @map("film_id")
+  fileType  String?  @map("file_type")
+  fileName  String?  @map("file_name")
+  filePath  String?  @map("file_path")
+  fileSize  Int?     @map("file_size")
+  mimeType  String?  @map("mime_type")
+  uploadedAt DateTime @default(now()) @map("uploaded_at")
+  isPrimary Boolean  @default(false) @map("is_primary")
+
+  film Film @relation(fields: [filmId], references: [id], onDelete: Cascade)
+
+  @@map("film_files")
+}
+
+model FilmCategory {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int      @map("tenant_id")
+  festivalId  Int      @map("festival_id")
+  name        String
+  description String?
+  entryFee    Float?   @map("entry_fee")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  festival Festival @relation(fields: [festivalId], references: [id], onDelete: Cascade)
+
+  @@map("film_categories")
+}
+
+model Award {
+  id            Int      @id @default(autoincrement())
+  festivalId    Int      @map("festival_id")
+  filmId        Int?     @map("film_id")
+  category      String?
+  awardName     String?  @map("award_name")
+  recipientName String?  @map("recipient_name")
+  year          Int?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  festival Festival @relation(fields: [festivalId], references: [id], onDelete: Cascade)
+  film     Film?    @relation(fields: [filmId], references: [id], onDelete: SetNull)
+
+  @@map("awards")
+}
+
+model Judge {
+  id          Int       @id @default(autoincrement())
+  tenantId    Int       @map("tenant_id")
+  festivalId  Int       @map("festival_id")
+  email       String
+  firstName   String    @map("first_name")
+  lastName    String    @map("last_name")
+  bio         String?
+  expertise   String?
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  festival    Festival       @relation(fields: [festivalId], references: [id], onDelete: Cascade)
+  judgeScores JudgeScore[]
+
+  @@unique([tenantId, festivalId, email])
+  @@index([festivalId, isActive])
+  @@index([tenantId, isActive])
+  @@map("judges")
+}
+
+model JudgeScore {
+  id          Int      @id @default(autoincrement())
+  judgeId     Int      @map("judge_id")
+  filmId      Int      @map("film_id")
+  criteria    String
+  score       Float
+  maxScore    Float    @default(10) @map("max_score")
+  feedback    String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  judge Judge @relation(fields: [judgeId], references: [id], onDelete: Cascade)
+  film  Film  @relation(fields: [filmId], references: [id], onDelete: Cascade)
+
+  @@unique([judgeId, filmId, criteria])
+  @@map("judge_scores")
+}
+
+model Payment {
+  id               Int       @id @default(autoincrement())
+  tenantId         Int       @map("tenant_id")
+  festivalId       Int       @map("festival_id")
+  filmId           Int?      @map("film_id")
+  stripePaymentId  String?   @map("stripe_payment_id")
+  amount           Float
+  currency         String    @default("USD")
+  status           String    @default("pending")
+  paymentMethod    String?   @map("payment_method")
+  customerEmail    String?   @map("customer_email")
+  customerName     String?   @map("customer_name")
+  description      String?
+  metadata         String    @default("{}")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  festival Festival  @relation(fields: [festivalId], references: [id], onDelete: Cascade)
+  film     Film?     @relation(fields: [filmId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, festivalId])
+  @@index([status, createdAt])
+  @@index([stripePaymentId])
+  @@index([customerEmail])
+  @@map("payments")
+}
+
+model EmailTemplate {
+  id          Int      @id @default(autoincrement())
+  tenantId    Int      @map("tenant_id")
+  name        String
+  subject     String
+  htmlBody    String   @map("html_body")
+  textBody    String?  @map("text_body")
+  variables   String   @default("[]")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  emailLogs  EmailLog[]
+
+  @@unique([tenantId, name])
+  @@map("email_templates")
+}
+
+model EmailLog {
+  id           Int      @id @default(autoincrement())
+  tenantId     Int      @map("tenant_id")
+  templateId   Int?     @map("template_id")
+  recipientEmail String @map("recipient_email")
+  subject      String
+  status       String   @default("pending")
+  errorMessage String?  @map("error_message")
+  sentAt       DateTime? @map("sent_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  template EmailTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@index([status, createdAt])
+  @@index([recipientEmail])
+  @@index([sentAt])
+  @@map("email_logs")
+}
+
+model VideoRoom {
+  id             Int      @id @default(autoincrement())
+  tenantId       Int      @map("tenant_id")
+  roomId         String   @unique @map("room_id")
+  name           String?
+  createdBy      Int?     @map("created_by")
+  maxParticipants Int     @default(10) @map("max_participants")
+  isActive       Boolean  @default(true) @map("is_active")
+  startedAt      DateTime? @map("started_at")
+  endedAt        DateTime? @map("ended_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  settings       String   @default("{}")
+
+  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator           AdminUser?          @relation("VideoRoomCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  roomParticipants  RoomParticipant[]
+  roomChatMessages  RoomChatMessage[]
+  roomRecordings    RoomRecording[]
+  roomActivityLogs  RoomActivityLog[]
+
+  @@index([tenantId, isActive])
+  @@index([isActive, createdAt])
+  @@map("video_rooms")
+}
+
+model RoomParticipant {
+  id       Int       @id @default(autoincrement())
+  roomId   Int       @map("room_id")
+  userId   Int       @map("user_id")
+  peerId   String?   @map("peer_id")
+  joinedAt DateTime  @default(now()) @map("joined_at")
+  leftAt   DateTime? @map("left_at")
+  role     String    @default("participant")
+  isActive Boolean   @default(true) @map("is_active")
+
+  room VideoRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("room_participants")
+}
+
+model RoomChatMessage {
+  id     Int      @id @default(autoincrement())
+  roomId Int      @map("room_id")
+  userId Int      @map("user_id")
+  message String?
+  sentAt DateTime @default(now()) @map("sent_at")
+
+  room VideoRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("room_chat_messages")
+}
+
+model RoomRecording {
+  id        Int       @id @default(autoincrement())
+  roomId    Int       @map("room_id")
+  filePath  String?   @map("file_path")
+  fileSize  Int?      @map("file_size")
+  duration  Int?
+  startedAt DateTime? @map("started_at")
+  endedAt   DateTime? @map("ended_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  room VideoRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@map("room_recordings")
+}
+
+model RoomActivityLog {
+  id        Int      @id @default(autoincrement())
+  roomId    Int      @map("room_id")
+  userId    Int?     @map("user_id")
+  action    String?
+  details   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  room VideoRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@map("room_activity_logs")
+}
+
+model ApiKey {
+  id          Int       @id @default(autoincrement())
+  tenantId    Int       @map("tenant_id")
+  keyHash     String    @unique @map("key_hash")
+  name        String?
+  permissions String    @default("[\"read\"]")
+  rateLimit   Int       @default(100) @map("rate_limit")
+  expiresAt   DateTime? @map("expires_at")
+  lastUsedAt  DateTime? @map("last_used_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  isActive    Boolean   @default(true) @map("is_active")
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  apiKeyLogs ApiKeyLog[]
+
+  @@index([tenantId, isActive])
+  @@index([expiresAt])
+  @@map("api_keys")
+}
+
+model ApiKeyLog {
+  id           Int      @id @default(autoincrement())
+  apiKeyId     Int      @map("api_key_id")
+  endpoint     String?
+  method       String?
+  statusCode   Int?     @map("status_code")
+  responseTime Int?     @map("response_time")
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  apiKey ApiKey @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+
+  @@map("api_key_logs")
+}
+
+// Security & Logging
+model SecurityLog {
+  id         Int      @id @default(autoincrement())
+  tenantId   Int      @map("tenant_id")
+  eventType  String?  @map("event_type")
+  severity   String?
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  userId     Int?     @map("user_id")
+  details    String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([eventType, createdAt])
+  @@index([severity, createdAt])
+  @@index([ipAddress])
+  @@map("security_logs")
+}
+
+model TenantAccessLog {
+  id        Int      @id @default(autoincrement())
+  tenantId  Int      @map("tenant_id")
+  userId    Int?     @map("user_id")
+  action    String?
+  resource  String?
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+  @@index([userId, createdAt])
+  @@map("tenant_access_logs")
+}
+
+model AdminActivityLog {
+  id         Int      @id @default(autoincrement())
+  tenantId   Int      @map("tenant_id")
+  adminId    Int      @map("admin_id")
+  action     String?
+  entityType String?  @map("entity_type")
+  entityId   Int?     @map("entity_id")
+  details    String?
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tenant Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  admin  AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@map("admin_activity_logs")
+}
+
+model TenantAdminLog {
+  id        Int      @id @default(autoincrement())
+  tenantId  Int      @map("tenant_id")
+  adminId   Int      @map("admin_id")
+  action    String?
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  admin  TenantAdmin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_admin_logs")
+}
+
+model RateLimit {
+  id         Int      @id @default(autoincrement())
+  identifier String
+  endpoint   String?
+  attempts   Int      @default(0)
+  resetAt    DateTime? @map("reset_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([identifier, endpoint])
+  @@map("rate_limits")
+}
+
+// GDPR Compliance
+model DataExportRequest {
+  id           Int       @id @default(autoincrement())
+  tenantId     Int       @map("tenant_id")
+  userId       Int       @map("user_id")
+  requestType  String    @map("request_type")
+  status       String    @default("pending")
+  requestedAt  DateTime  @default(now()) @map("requested_at")
+  processedAt  DateTime? @map("processed_at")
+  completedAt  DateTime? @map("completed_at")
+  downloadUrl  String?   @map("download_url")
+  expiresAt    DateTime? @map("expires_at")
+  failureReason String?  @map("failure_reason")
+  ipAddress    String    @map("ip_address")
+  userAgent    String    @map("user_agent")
+  metadata     String    @default("{}")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([userId, requestType])
+  @@index([status, requestedAt])
+  @@map("data_export_requests")
+}
+
+model GDPRConsent {
+  id           Int       @id @default(autoincrement())
+  tenantId     Int       @map("tenant_id")
+  userId       Int       @map("user_id")
+  consentType  String    @map("consent_type")
+  granted      Boolean   @default(true)
+  grantedAt    DateTime  @default(now()) @map("granted_at")
+  revokedAt    DateTime? @map("revoked_at")
+  ipAddress    String    @map("ip_address")
+  userAgent    String    @map("user_agent")
+  legalBasis   String    @map("legal_basis")
+  description  String?
+  version      String    @default("1.0")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, consentType])
+  @@map("gdpr_consents")
+}
+
+model DataRetentionPolicy {
+  id           Int      @id @default(autoincrement())
+  tenantId     Int      @map("tenant_id")
+  dataType     String   @map("data_type")
+  retentionDays Int     @map("retention_days")
+  description  String?
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, dataType])
+  @@map("data_retention_policies")
+}
+
+model DataBreachLog {
+  id              Int       @id @default(autoincrement())
+  tenantId        Int       @map("tenant_id")
+  breachType      String    @map("breach_type")
+  severity        String
+  description     String
+  affectedUsers   Int       @default(0) @map("affected_users")
+  dataTypes       String    @map("data_types")
+  discoveredAt    DateTime  @default(now()) @map("discovered_at")
+  reportedAt      DateTime? @map("reported_at")
+  resolvedAt      DateTime? @map("resolved_at")
+  reportedToAuthority Boolean @default(false) @map("reported_to_authority")
+  notifiedUsers   Boolean   @default(false) @map("notified_users")
+  status          String    @default("investigating")
+  remedialActions String?   @map("remedial_actions")
+  createdBy       Int       @map("created_by")
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdByUser AdminUser @relation(fields: [createdBy], references: [id])
+
+  @@map("data_breach_logs")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// STREAMING SIDE — New models for video streaming (String UUIDs)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model StreamUser {
+  id            String    @id @default(uuid())
+  username      String    @unique
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  displayName   String?   @map("display_name")
+  avatarUrl     String?   @map("avatar_url")
+  bio           String?
+  role          String    @default("viewer") // viewer, creator, admin
+  verified      Boolean   @default(false)
+  isBanned      Boolean   @default(false) @map("is_banned")
+  banReason     String?   @map("ban_reason")
+  subscriberCount Int     @default(0) @map("subscriber_count")
+  totalViews    BigInt    @default(0) @map("total_views")
+  lastLogin     DateTime? @map("last_login")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  channel          Channel?
+  comments         Comment[]
+  commentReactions CommentReaction[]
+  videoReactions   VideoReaction[]
+  videoRatings     VideoRating[]
+  viewHistory      ViewHistory[]
+  playlists        Playlist[]
+  subscribedTo     ChannelSubscription[] @relation("Subscriber")
+  subscribers      ChannelSubscription[] @relation("SubscribedTo")
+  notifications    Notification[]
+
+  @@map("stream_users")
+}
+
+model Channel {
+  id              String   @id @default(uuid())
+  userId          String   @unique @map("user_id")
+  name            String
+  description     String?
+  bannerUrl       String?  @map("banner_url")
+  avatarUrl       String?  @map("avatar_url")
+  subscriberCount Int      @default(0) @map("subscriber_count")
+  totalViews      BigInt   @default(0) @map("total_views")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user   StreamUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videos Video[]
+
+  @@map("channels")
+}
+
+model Video {
+  id            String   @id @default(uuid())
+  channelId     String   @map("channel_id")
+  title         String
+  description   String?
+  duration      Int?
+  genre         String?
+  language      String?
+  thumbnailUrl  String?  @map("thumbnail_url")
+  status        String   @default("draft")
+  viewCount     BigInt   @default(0) @map("view_count")
+  likeCount     Int      @default(0) @map("like_count")
+  dislikeCount  Int      @default(0) @map("dislike_count")
+  isPublic      Boolean  @default(true) @map("is_public")
+  publishedAt   DateTime? @map("published_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  channel        Channel          @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  videoFiles     VideoStreamFile[]
+  comments       Comment[]
+  reactions      VideoReaction[]
+  ratings        VideoRating[]
+  viewHistory    ViewHistory[]
+  playlistItems  PlaylistVideo[]
+
+  @@index([channelId, status])
+  @@index([status, publishedAt])
+  @@index([genre])
+  @@map("videos")
+}
+
+model VideoStreamFile {
+  id        String   @id @default(uuid())
+  videoId   String   @map("video_id")
+  quality   String
+  filePath  String   @map("file_path")
+  fileSize  BigInt?  @map("file_size")
+  mimeType  String?  @map("mime_type")
+  bitrate   Int?
+  codec     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@map("video_stream_files")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  videoId   String   @map("video_id")
+  userId    String   @map("user_id")
+  parentId  String?  @map("parent_id")
+  content   String
+  isEdited  Boolean  @default(false) @map("is_edited")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  video     Video             @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user      StreamUser        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent    Comment?          @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[]         @relation("CommentReplies")
+  reactions CommentReaction[]
+
+  @@index([videoId, createdAt])
+  @@map("comments")
+}
+
+model CommentReaction {
+  id        String   @id @default(uuid())
+  commentId String   @map("comment_id")
+  userId    String   @map("user_id")
+  type      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  comment Comment    @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    StreamUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@map("comment_reactions")
+}
+
+model VideoReaction {
+  id        String   @id @default(uuid())
+  videoId   String   @map("video_id")
+  userId    String   @map("user_id")
+  type      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  video Video      @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user  StreamUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, userId])
+  @@map("video_reactions")
+}
+
+model VideoRating {
+  id        String   @id @default(uuid())
+  videoId   String   @map("video_id")
+  userId    String   @map("user_id")
+  score     Int
+  review    String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  video Video      @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user  StreamUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, userId])
+  @@map("video_ratings")
+}
+
+model ViewHistory {
+  id        String   @id @default(uuid())
+  videoId   String   @map("video_id")
+  userId    String   @map("user_id")
+  watchTime Int      @default(0) @map("watch_time")
+  progress  Float    @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  video Video      @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user  StreamUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, userId])
+  @@map("view_history")
+}
+
+model ChannelSubscription {
+  id            String   @id @default(uuid())
+  subscriberId  String   @map("subscriber_id")
+  subscribedToId String  @map("subscribed_to_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  subscriber   StreamUser @relation("Subscriber", fields: [subscriberId], references: [id], onDelete: Cascade)
+  subscribedTo StreamUser @relation("SubscribedTo", fields: [subscribedToId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriberId, subscribedToId])
+  @@map("channel_subscriptions")
+}
+
+model Playlist {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  title       String
+  description String?
+  isPublic    Boolean  @default(true) @map("is_public")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user   StreamUser      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videos PlaylistVideo[]
+
+  @@map("playlists")
+}
+
+model PlaylistVideo {
+  id         String   @id @default(uuid())
+  playlistId String   @map("playlist_id")
+  videoId    String   @map("video_id")
+  position   Int      @default(0)
+  addedAt    DateTime @default(now()) @map("added_at")
+
+  playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  video    Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([playlistId, videoId])
+  @@map("playlist_videos")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  type      String
+  title     String
+  message   String?
+  data      Json     @default("{}")
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user StreamUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// BILLING — Shared subscription plans
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+model SubscriptionPlan {
+  id            String   @id @default(uuid())
+  name          String
+  tier          String   @unique
+  priceMonthly  Float    @map("price_monthly")
+  priceYearly   Float    @map("price_yearly")
+  features      Json     @default("[]")
+  limits        Json     @default("{}")
+  isActive      Boolean  @default(true) @map("is_active")
+  stripePriceMonthly String? @map("stripe_price_monthly")
+  stripePriceYearly  String? @map("stripe_price_yearly")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("subscription_plans")
+}

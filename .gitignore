@@ -1,0 +1,56 @@
+# Environment
+.env
+.env.*
+!.env.example
+!**/.env.example
+.env.local
+.env.production
+.env.*.local
+*.env.bak
+*.pem
+*.key
+id_rsa*
+credentials.json
+service-account*.json
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Database
+*.sqlite
+*.db
+
+# Uploads
+uploads/
+media/
+
+# Coverage
+coverage/
+
+# Prisma
+packages/shared-db/src/generated/
+
+# Backups
+backups/
+
+# Claude
+.claude/
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.next/
+.turbo/
